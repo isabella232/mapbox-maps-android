@@ -80,6 +80,7 @@ class CameraAnimationsPluginImplTest {
     every { CameraTransform.normalizeAngleRadians(any(), any()) } answers { secondArg() }
     cameraAnimationsPluginImpl = CameraAnimationsPluginImpl().apply {
       onDelegateProvider(delegateProvider)
+      onSizeChanged(10, 10)
     }
   }
 
@@ -811,6 +812,27 @@ class CameraAnimationsPluginImplTest {
     assertEquals(true, listenerTwo.cancelling)
     assertEquals(true, listenerTwo.ending)
     assertEquals(true, listenerTwo.interrupting)
+  }
+
+  @Test
+  fun anchorTest() {
+    assertEquals(cameraAnimationsPluginImpl.mapCenter, cameraAnimationsPluginImpl.lastAnchor)
+    shadowOf(getMainLooper()).pause()
+    val anchor = ScreenCoordinate(7.0, 7.0)
+    val anchorAnimator = cameraAnimationsPluginImpl.createAnchorAnimator(
+      cameraAnimatorOptions(anchor) {
+        startValue = anchor
+      }
+    ) {
+      duration = 10L
+    }
+    cameraAnimationsPluginImpl.registerAnimators(anchorAnimator)
+    anchorAnimator.start()
+    shadowOf(getMainLooper()).idle()
+    assertNotEquals(cameraAnimationsPluginImpl.mapCenter, cameraAnimationsPluginImpl.lastAnchor)
+    assertEquals(anchor, cameraAnimationsPluginImpl.lastAnchor)
+    cameraAnimationsPluginImpl.resetAnchor()
+    assertEquals(cameraAnimationsPluginImpl.mapCenter, cameraAnimationsPluginImpl.lastAnchor)
   }
 
   class LifecycleListener : CameraAnimationsLifecycleListener {

@@ -5,6 +5,7 @@ import android.animation.AnimatorSet
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 import com.mapbox.common.Logger
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -48,6 +49,11 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
   private val pitchListeners = CopyOnWriteArraySet<CameraAnimatorChangeListener<Double>>()
 
   private val lifecycleListener = CopyOnWriteArraySet<CameraAnimationsLifecycleListener>()
+
+  @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+  internal var mapCenter: ScreenCoordinate? = null
+  @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+  internal var lastAnchor: ScreenCoordinate? = null
 
   private var center by Delegates.observable<Point?>(null) { _, old, new ->
     new?.let {
@@ -155,7 +161,7 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
     val startValue = cameraAnimator.startValue ?: when (cameraAnimator.type) {
       CameraAnimatorType.CENTER -> mapCameraDelegate.getCameraOptions().center
       CameraAnimatorType.ZOOM -> mapCameraDelegate.getCameraOptions().zoom
-      CameraAnimatorType.ANCHOR -> cameraAnimator.startValue
+      CameraAnimatorType.ANCHOR -> lastAnchor
       CameraAnimatorType.PADDING -> mapCameraDelegate.getCameraOptions().padding
       CameraAnimatorType.BEARING -> mapCameraDelegate.getCameraOptions().bearing
       CameraAnimatorType.PITCH -> mapCameraDelegate.getCameraOptions().pitch
@@ -191,7 +197,7 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
 
   internal fun notifyListeners(cameraOptions: CameraOptions) {
     cameraOptions.also {
-      anchor = it.anchor
+      anchor = lastAnchor
       bearing = it.bearing
       center = it.center
       padding = it.padding
@@ -278,7 +284,11 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
             unregisterAnimators(this, cancelAnimators = false)
           }
           if (runningAnimatorsQueue.isEmpty()) {
-            performMapJump(cameraOptionsBuilder.build())
+            // TODO handle anchor update manually, to be fixed in core to obtain from CameraOptions
+            if (animator.type == CameraAnimatorType.ANCHOR) {
+              lastAnchor = animatedValue as ScreenCoordinate
+            }
+            performMapJump(cameraOptionsBuilder.anchor(lastAnchor).build())
             mapTransformDelegate.setUserAnimationInProgress(false)
           }
         } ?: throw RuntimeException(
@@ -312,7 +322,12 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
           null
         }
       }
+      // TODO handle anchor update manually, to be fixed in core to obtain from CameraOptions
+      if (animator.type == CameraAnimatorType.ANCHOR) {
+        lastAnchor = it.animatedValue as ScreenCoordinate
+      }
       cameraOptions?.let { camera ->
+        camera.anchor = lastAnchor
         // move map camera
         performMapJump(camera)
         // reset values
@@ -776,6 +791,15 @@ internal class CameraAnimationsPluginImpl : CameraAnimationsPlugin {
         false
       )
     animatorSet.start()
+  }
+
+  override fun onSizeChanged(width: Int, height: Int) {
+    mapCenter = ScreenCoordinate((width / 2).toDouble(), (height / 2).toDouble())
+    lastAnchor = mapCenter
+  }
+
+  override fun resetAnchor() {
+    lastAnchor = mapCenter
   }
 
   private fun registerInternalAnimators(

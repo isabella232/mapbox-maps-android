@@ -317,6 +317,7 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
               CameraOptions.Builder().anchor(anchor).zoom(zoom).build(),
               immediateCameraJumpOptions
             )
+            cameraAnimationsPlugin.resetAnchor()
           }
 
           return true
@@ -561,6 +562,7 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
           .build(),
         immediateCameraJumpOptions
       )
+      cameraAnimationsPlugin.resetAnchor()
     } else {
       val zoomBy =
         ln(detector.scaleFactor.toDouble()) / ln(PI / 2) * ZOOM_RATE.toDouble() * internalSettings.zoomRate.toDouble()
@@ -572,6 +574,7 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
             .build(),
           immediateCameraJumpOptions
         )
+        cameraAnimationsPlugin.resetAnchor()
       }
     }
 
@@ -727,11 +730,12 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
       duration = animationTime
     }
 
-    bearingAnimator.addUpdateListener {
+    anchorAnimator.addUpdateListener {
       object : AnimatorListenerAdapter() {
         override fun onAnimationStart(animation: Animator) {}
         override fun onAnimationCancel(animation: Animator) {}
         override fun onAnimationEnd(animation: Animator) {
+          cameraAnimationsPlugin.resetAnchor()
           dispatchCameraIdle()
         }
       }
@@ -805,7 +809,7 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
           .build(),
         immediateCameraJumpOptions
       )
-
+      cameraAnimationsPlugin.resetAnchor()
       notifyOnRotateListeners(detector)
     }
 
@@ -988,13 +992,14 @@ class GesturesPluginImpl : GesturesPlugin, GesturesSettingsBase {
       duration = animationTime
     }
 
-    zoomAnimator.addListener(object : AnimatorListenerAdapter() {
+    anchorAnimator.addListener(object : AnimatorListenerAdapter() {
 
       override fun onAnimationStart(animation: Animator) {}
 
       override fun onAnimationCancel(animation: Animator) {}
 
       override fun onAnimationEnd(animation: Animator) {
+        cameraAnimationsPlugin.resetAnchor()
         dispatchCameraIdle()
       }
     })

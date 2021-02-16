@@ -6,11 +6,12 @@ import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ScreenCoordinate
 import com.mapbox.maps.plugin.MapPlugin
+import com.mapbox.maps.plugin.MapSizePlugin
 
 /**
  * Interface to interact with Camera Animations plugin
  */
-interface CameraAnimationsPlugin : MapPlugin {
+interface CameraAnimationsPlugin : MapPlugin, MapSizePlugin {
   /**
    * Ease the map camera to a given camera options.
    *
@@ -293,4 +294,9 @@ interface CameraAnimationsPlugin : MapPlugin {
    * @param animators Variable number of [ValueAnimator]'s
    */
   fun playAnimatorsSequentially(vararg animators: ValueAnimator)
+
+  /**
+   * Resets anchor and sets it as center of current map view.
+   */
+  fun resetAnchor()
 }
